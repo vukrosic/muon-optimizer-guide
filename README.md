@@ -1,32 +1,56 @@
 # LLM Research Kit
 
-A high-performance codebase for LLM research, pretraining, and optimization.
-
-## 🗺️ Project Goals
-
-This repository provides a clean, efficient, and reproducible environment for experimenting with Large Language Models. Whether you are testing new architectures, optimizers, or data strategies, this kit is designed to scale from small experiments to large-scale pretraining.
+A high-performance codebase for LLM research, pretraining, and optimization: testing new architectures, optimizers, or data strategies.
 
 ---
 
 ## 🚀 Getting Started
 
-To set up your environment and start training, please follow the **[Full Setup Guide](docs/SETUP_INSTRUCTIONS.md)**.
+#### Install Dependencies
+```bash
+pip install -r requirements.txt
+```
 
-We follow scientifically rigorous research practices. See **[Contributing Guidelines](docs/CONTRIBUTING.md)** for more details.
+### Step 2: Download the Dataset
 
----
+### Option A: 1B tokens
+```bash
+python3 -c "
+from datasets import load_dataset
+import os
+print('Downloading 1B Pretraining Data...')
+ds = load_dataset('vukrosic/blueberry-1B-pretrain')
+os.makedirs('processed_data/pretrain_1B', exist_ok=True)
+ds.save_to_disk('processed_data/pretrain_1B')
+print('✅ Full Data Ready!')
+"
+```
 
-## 🛠 Features
+### Option B: 2B tokens
+```bash
+python3 -c "
+from datasets import load_dataset
+import os
+print('Downloading 2B Pretraining Data...')
+ds = load_dataset('vukrosic/blueberry-2B-pretrain')
+os.makedirs('processed_data/pretrain_2B', exist_ok=True)
+ds.save_to_disk('processed_data/pretrain_2B')
+print('✅ Full Data Ready!')
+"
+```
 
-- **High-Performance Training**: Optimized for speed and efficiency using modern PyTorch features.
-- **Reproducibility**: Built-in tools to ensure experiments are consistent across different runs.
-- **Modular Design**: Easily swap out models, optimizers, and datasets.
-- **Benchmarking**: Standardized benchmarks to measure progress.
+### Option C: Quick Start (40M Tokens)
+```bash
+python3 -c "
+from datasets import load_dataset
+import os
+print('Downloading 40M Token Subset...')
+ds = load_dataset('vukrosic/blueberry-1B-pretrain', split='train[:20000]')
+os.makedirs('processed_data/speedrun_40M', exist_ok=True)
+ds.save_to_disk('processed_data/speedrun_40M')
+print('✅ Speedrun Data Ready!')
+"
+```
 
----
 
-## 🤝 Partners & Support
 
-**If you want to collaborate on research or contribute to this open-source initiative, please reach out.**
-
-We work with various partners to provide compute and resources for open-source research.
