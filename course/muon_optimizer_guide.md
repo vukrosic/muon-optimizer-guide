@@ -8,20 +8,33 @@ If you train ANY neural network - you MUST try it!
 
 It should make your training 30% to 2x faster!
 
+---
+
+Written by Vuk Rosić, reviewed by [Chaoqi Liang](https://scholar.google.com/citations?user=r1yke4EAAAAJ&hl=en)
+
+---
+
 ### Evidence that Muon beats AdamW
 
-![NanoGPT wall-clock time curves](https://pbs.twimg.com/media/GZoW2CLbsAAeXVK.jpg)
 
-*Faster LLM training.* [source](https://kellerjordan.github.io/posts/muon/)
+<img src="images/muon_vs_adamw_kimi.png" alt="Kimi-k1.5 loss curves" width="600">
 
-![Kimi-k1.5 loss curves](images/muon_vs_adamw_kimi.png)
+Figure 1: *Muon is effective on large-scale LLMs.* [source](https://arxiv.org/pdf/2502.16982)
 
-*Muon is effective on large-scale LLMs.* [source](https://arxiv.org/pdf/2502.16982)
+---
+
+Different optimizers to same loss as fast as possible, with as few tokens as possible:
+
+<img src="https://pbs.twimg.com/media/GZoW2CLbsAAeXVK.jpg" alt="NanoGPT wall-clock time curves" width="600">
+
+Figure 2: *Faster LLM training.* [source](https://kellerjordan.github.io/posts/muon/)
 
 > For code & implementation scroll below.
 
 
 # The main idea
+
+If you are a beginner and don't understand any of this, please copy it into Gemini, ChatGPT, Claude, Kimi, etc. and ask it to teach you.
 
 Let's start with the basic formula for weight updates:
 
@@ -38,7 +51,7 @@ $$
 
 If we take a look at the gradients $\nabla_{\theta} \mathcal{L}$, this matrix is subtracted from weights - this is how neural network learns, however, this matrix might be ill-conditioned - some directions might have a strong "pull", while other directions might have a weak "pull".
 
-![Non-Orthogonal Effects](images/01_non_orthogonal_effect.png)
+<img src="images/01_non_orthogonal_effect.png" alt="Non-Orthogonal Effects" width="600">
 
 A "direction" or a "pull" is a coordinated change across multiple weights. It controls an input→output pathway through a layer.
 
@@ -53,23 +66,20 @@ It's not that there is less data for green color or circles are more important, 
 
 Muon optimizer solves this:
 
-![Orthogonal Effects](images/01_orthogonal_effect.png)
+<img src="images/01_orthogonal_effect.png" alt="Orthogonal Effects" width="600">
 
 
-![SVD intuition for Muon: raw gradient has uneven singular values, while Muon uses UV^T with equalized singular values.](images/03a_svd_for_muon_intro.png)
+<img src="images/03a_svd_for_muon_intro.png" alt="SVD intuition for Muon: raw gradient has uneven singular values, while Muon uses UV^T with equalized singular values." width="600">
 
-Muon optimizer will make all singular values equal to 1, so it will update / learn [green -> grass] pathway at the same speed as [circle -> wheels] pathway.
+Muon optimizer will make all singular values equal to 1 (actually near 1, for faster computation), so it will update / learn [green -> grass] pathway at the same speed as [circle -> wheels] pathway.
 
-**IMPORTANT**: Use Muon only for 2D weight matrices. Do NOT use it for embeddings, biases, LayerNorms, or the final output head — use AdamW for those.
+**IMPORTANT**: Use Muon only for 2D weight matrices. Do NOT use it for embeddings, biases, LayerNorms, or the final output head - use AdamW for those.
 
 
 
 ### Crucial distinction
 
-Muon optimizer makes makes **weight update matrices** orthogonal, not the weight matrices.
-
-
-![SVD intuition for Muon: raw gradient has uneven singular values, while Muon uses UV^T with equalized singular values.](images/03a_svd_for_muon_intro.png)
+Muon optimizer makes **weight update matrices** orthogonal, not the weight matrices.
 
 # Code & Implementation
 
@@ -160,6 +170,12 @@ class Muon(torch.optim.Optimizer):
                 scale = max(1, p.size(-2) / p.size(-1)) ** 0.5
                 p.add_(g.view_as(p), alpha=-group["lr"] * scale)
 ```
+
+> **Note:** For quick use, just copy-paste the code above — it works out of the box. For more control (toggling Nesterov, adjusting iteration steps), grab [`optimizers/muon.py`](../optimizers/muon.py). Differences:
+> - **Weight decay** — the code above includes optional weight decay; `muon.py` omits it since weight decay is rarely needed for Muon-optimized params (AdamW already handles it for the other params).
+> - **Nesterov toggle** — `muon.py` has a `nesterov` flag (default `True`) that lets you fall back to plain momentum; the code above always uses Nesterov.
+> - **Configurable `ns_steps`** — `muon.py` lets you set the number of Newton-Schulz iterations; the code above hardcodes 5.
+> - **Assertions** — `muon.py` includes `assert G.ndim >= 2` and `assert steps <= len(coeffs_list)` for safety.
 
 ---
 

@@ -1,3 +1,7 @@
+# Muon Optimizer Guide
+
+[]
+
 # LLM Research Kit
 
 A high-performance codebase for LLM research, pretraining, and optimization: testing new architectures, optimizers, or data strategies.
