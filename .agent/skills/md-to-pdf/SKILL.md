@@ -15,8 +15,8 @@ Convert word for word, everything must be IDENTICAL. Make spaces between paragra
 ## Workflow
 
 1. **MD to TEX**: Convert the markdown content to a structured LaTeX (`.tex`) file word for word.
-   - **Title**: Add `\\ \large Research Progress Report` to the main title.
-   - **Author**: Set the author to **Vuk Rosić \thanks{Thank you to Novita AI for providing compute for this research.} \\ \small \raisebox{-0.2\height}{\includegraphics[width=0.02\textwidth]{/Users/vukrosic/AI Science Projects/AI Blog Writing/.agent/skills/md-to-pdf/github.jpg}} \texttt{vukrosic/qk\_norm\_collapse}**.
+   - **Title**: Use the markdown H1 as the title. Eliminate any research progress report subtitles.
+   - **Author**: Set the author to **Vuk Rosić, reviewed by Chaoqi Liang \\ \small \raisebox{-0.2\height}{\includegraphics[width=0.02\textwidth]{/Users/vukrosic/AI Science Projects/muon-course/.agent/skills/md-to-pdf/github.jpg}} \texttt{vukrosic/muon-optimizer-guide}**.
    - Use standard packages: `fontspec` (for Unicode), `amsmath`, `amssymb`, `hyperref`, `geometry`, `booktabs`, `enumitem`, `parskip`, `setspace`, `graphicx`, `xcolor`, `pagecolor`.
    - Images in tex must be at the exact same spot and order as in the markdown file.
    - **Styling Rules**:
