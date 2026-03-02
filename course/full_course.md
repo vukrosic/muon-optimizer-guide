@@ -2,36 +2,57 @@
 
 # Full Course: The Muon Optimizer
 
-## From First Principles to Production Implementation
-
 ---
 
 # Table of Contents
 
 1. **Module 1: Prerequisites & Background**
 2. **Module 2: Motivation — Why We Need Muon**
-3. **Module 3: Mathematical Foundations**
-4. **Module 3.5: SVD for the Muon Optimizer**
-5. **Module 4: The Muon Algorithm — Step by Step**
-6. **Module 5: Implementation from Scratch**
-7. **Module 6: Newton-Schulz Iterations — Deep Dive**
-8. **Module 7: Practical Usage & Hyperparameter Tuning**
-9. **Module 8: Muon vs Other Optimizers**
-10. **Module 9: Distributed / Multi-GPU Muon**
-11. **Module 10: Advanced Topics & Current Research**
-12. **Appendix A: Quick Reference Card**
-13. **Appendix B: Exercises**
-14. **Appendix C: FAQ**
+3. **Module 3: Mathematical Foundations** (incl. **3.5 SVD Intuition**)
+4. **Module 4: The Muon Algorithm — Step by Step**
+5. **Module 5: Implementation from Scratch**
+6. **Module 6: Newton-Schulz Iterations — Deep Dive**
+7. **Module 7: Practical Usage & Hyperparameter Tuning**
+8. **Module 8: Muon vs Other Optimizers**
+9. **Module 9: Distributed / Multi-GPU Muon**
+10. **Module 10: Advanced Topics & Current Research**
+11. **Appendix A: Quick Reference Card**
+12. **Appendix B: Exercises**
+13. **Appendix C: FAQ**
 
 ---
 
 # MODULE 1: Prerequisites & Background
 
+This course contains deep explanations of Muon optimizer and performing AI research with it.
+
 ## 1.1 What is Muon?
 
-**Muon** stands for **M**oment**U**m **O**rthogonalized by **N**ewton-schulz.
+Recently there is a new best optimizer in the town - **Muon** (**M**oment**U**m **O**rthogonalized by **N**ewton-schulz).
 
-It is an optimizer created by **Keller Jordan** (and collaborators) in the context of the `modded-nanogpt` speedrun project (late 2024). It was designed to train transformers significantly faster than Adam/AdamW.
+It train transformers and neural networks faster than Adam/AdamW.
+
+To understand why Muon is so effective, it's helpful to remember what a weight matrix actually does. A matrix acts as a mathematical transformation that takes an input vector and rotates, scales, or shears it to produce an output vector:
+
+![Matrices Transform Vectors](images/01_matrix_vector_transform.png)
+
+This is weight update rule:
+
+![Weight Update Rule](images/01_weight_update_rule.png)
+
+This is weight update matrix:
+
+![Weight Update Matrix](images/01_weight_update_matrix.png)
+
+This is what happens if weight update matrix is not orthogonal:
+
+![Non-Orthogonal Effects](images/01_non_orthogonal_effect.png)
+
+This is what happens if weight update matrix is orthogonal:
+
+![Orthogonal Effects](images/01_orthogonal_effect.png)
+
+Muon orthogonalizes the weight update matrices, Muon ensures that all directions "pull" with equal strength. This overcomes a common flaw in standard optimizers where certain directions are neglected simply because their numeric gradients are small, forcing the network to learn efficiently across the entire parameter space.
 
 **Core idea in one sentence:**
 > Take the Nesterov momentum buffer, then orthogonalize it via an approximate polar decomposition (computed cheaply using Newton-Schulz iterations), and use that as the update.
@@ -48,6 +69,8 @@ $$
 
 The simplest optimization: move parameters in the direction of steepest descent.
 
+![Gradient Descent Contour](images/01_gradient_descent.png)
+
 ### 1.2.2 Momentum (Polyak / Heavy Ball)
 
 $$
@@ -58,6 +81,8 @@ m_{t+1} &= \beta \cdot m_t + \nabla L(\theta_t) \\
 $$
 
 Momentum accumulates past gradients to accelerate training and dampen oscillations.
+
+![Momentum Path](images/01_momentum.png)
 
 ### 1.2.3 Nesterov Accelerated Gradient (NAG)
 
@@ -76,6 +101,8 @@ m_{t+1} &= \beta \cdot m_t + \nabla L(\theta_t) \\
 \end{aligned}
 $$
 
+![Nesterov Lookahead](images/01_nesterov.png)
+
 ### 1.2.4 Adam / AdamW
 
 $$
@@ -89,6 +116,8 @@ v_t &= \beta_2 \cdot v_{t-1} + (1 - \beta_2) \cdot g_t^2 \quad &\text{\# second 
 $$
 
 Adam is the current default for deep learning. AdamW adds decoupled weight decay.
+
+![Adam Path](images/01_adam.png)
 
 ### 1.2.5 Key Linear Algebra Concepts
 
@@ -120,6 +149,8 @@ Where:
 **The orthogonal polar factor $Q$ is the closest orthogonal matrix to $G$** (in Frobenius norm).
 
 This is the key object Muon computes.
+
+![Polar Decomposition Geometry](images/01_polar_decomp.png)
 
 ---
 
@@ -200,6 +231,8 @@ The answer depends on the norm:
 
 **Muon performs steepest descent under the spectral norm!**
 
+![Visual comparison of steepest descent trajectories under L2 (Frobenius), L-infinity (SignSGD), and Spectral (Muon) norms.](images/02_steepest_descent_norms.png)
+
 This is ideal for weight matrices because:
 - It treats the matrix as a **linear operator**, not a bag of independent numbers
 - It pushes **all singular values equally**, preventing some directions from being neglected
@@ -212,47 +245,17 @@ On the `modded-nanogpt` speedrun (GPT-2 124M on OpenWebText):
 - **Muon**: reaches the same loss in **~5K steps** (roughly 2× fewer steps)
 - Wall-clock time is also faster due to simpler computation
 
-## 2.7 Critique of the Course
-
-This course is strong technically, but it can be improved for clarity, evidence quality, and learner usability.
-
-### Strengths
-
-1. The sequence is well designed: motivation -> theory -> algorithm -> implementation -> scaling.
-2. Explanations connect intuition to math effectively (especially SVD/polar factor sections).
-3. Practical content is substantial: code, tuning guidance, distributed training notes, and exercises.
-4. The course stays focused on one core idea and revisits it consistently from different angles.
-
-### Weaknesses
-
-1. Benchmark claims are mostly presented without explicit citations, configs, or reproducibility links.
-2. Some sections are dense and assume strong background without enough checkpoints for weaker learners.
-3. Notation and assumptions vary by module (for example matrix shape handling and normalization details), which can confuse readers.
-4. Failure modes and tradeoffs are under-developed (for example when Muon loses to AdamW, stability issues, or architecture-specific caveats).
-5. There is limited assessment scaffolding: exercises are good prompts but lack expected outputs or grading criteria.
-
-### High-Impact Improvements
-
-1. Add a reference block in each module with paper links, code commits, and experiment settings.
-2. Add "learning objectives", "prerequisites", and "time estimate" at the top of each module.
-3. Add mini checkpoints every 1-2 sections (short conceptual questions with answers in an appendix).
-4. Include one full reproducible benchmark recipe (hardware, batch size, tokenizer, schedule, seed, and exact command).
-5. Add a dedicated "limitations and open questions" section to balance the strong pro-Muon narrative.
-
-### Overall Assessment
-
-As a technical deep dive, this is a strong and ambitious course. With stronger citation/reproducibility practices and better learner scaffolding, it could move from good expert notes to excellent teaching material.
 
 ---
 
 
 ---
 
-# MODULE 3.5: SVD for the Muon Optimizer – What You Need to Know
+# MODULE 3: Mathematical Foundations
 
 ![SVD intuition for Muon: raw gradient has uneven singular values, while Muon uses UV^T with equalized singular values.](images/03a_svd_for_muon_intro.png)
 
-*Figure: Muon keeps the SVD directions ($U, V^T$) and removes scale imbalance by replacing $\Sigma$ with identity.*
+## MODULE 3.5: SVD for the Muon Optimizer – What You Need to Know
 
 ## Introduction
 
@@ -346,14 +349,9 @@ After a few brief iterations (usually just 5 or 6), it outputs a matrix that is 
 - **The Problem**: Raw gradients prioritize directions with large magnitudes, leading to slow training on flat dimensions.
 - **The Ideal Update**: $U V^T$. This treats all directions equally (setting all $\sigma_i = 1$).
 - **The Obstacle**: Exact SVD is far too slow for large neural networks.
-- **The Muon Innovation**: Use Newton-Schulz iterations to cheaply and quickly approximate $U V^T$ using only matrix multiplications.
-
-
 ---
 
-# MODULE 3: Mathematical Foundations
-
-## 3.1 Singular Value Decomposition (SVD) — Review
+## 3.6 Singular Value Decomposition (SVD) — Review
 
 For any matrix $G \in \mathbb{R}^{m \times n}$ with $m \ge n$:
 
@@ -366,7 +364,7 @@ Where:
 - $\Sigma \in \mathbb{R}^{m \times n}$ has singular values $\sigma_1 \ge \sigma_2 \ge \dots \ge \sigma_n \ge 0$ on the diagonal
 - $V \in \mathbb{R}^{n \times n}$ is orthogonal (right singular vectors)
 
-## 3.2 Polar Decomposition — Formal Treatment
+## 3.7 Polar Decomposition — Formal Treatment
 
 ### Definition
 
@@ -403,7 +401,7 @@ $$
 Q = G (G^TG)^{-1/2}
 $$
 
-## 3.3 Why Orthogonal Updates?
+## 3.8 Why Orthogonal Updates?
 
 Consider a weight matrix $W \in \mathbb{R}^{m \times n}$ in a neural network. When we update:
 
@@ -416,7 +414,7 @@ If $\Delta$ is the orthogonal polar factor of the gradient:
 - **No "rich get richer" problem**: unlike raw gradients where large singular value directions dominate
 - **Scale-free updates**: the update magnitude is determined by $\eta$ alone, not by gradient magnitude
 
-## 3.4 Steepest Descent — Formal Proof
+## 3.9 Steepest Descent — Formal Proof
 
 **Theorem**: Let $G \in \mathbb{R}^{m \times n}$ have SVD $G = U\Sigma V^T$. Then:
 
@@ -446,7 +444,7 @@ $$
 
 This is the orthogonal polar factor. ∎
 
-## 3.5 Computing the Polar Factor
+## 3.10 Computing the Polar Factor
 
 Three main approaches:
 
@@ -602,18 +600,6 @@ import torch.distributed as dist
 
 
 def newton_schulz_5(G, steps=5):
-    """
-    Compute the orthogonal polar factor of G using 
-    Newton-Schulz iterations (quintic variant).
-    
-    Args:
-        G: Input matrix of shape (m, n) where m >= n
-        steps: Number of Newton-Schulz iterations
-    
-    Returns:
-        Approximate orthogonal polar factor of G
-    """
-    assert G.shape[0] >= G.shape[1], "Need rows >= cols"
     
     # Quintic polynomial coefficients (optimized for convergence)
     # These are tuned so the combined iteration converges over 
@@ -623,8 +609,9 @@ def newton_schulz_5(G, steps=5):
     # (11.3168, -20.3300, 9.7132)  
     # (8.4749,  -13.9590, 6.1843)
     
-    # Normalize so singular values are near 1
-    X = G / (G.norm() + 1e-7)
+    # Normalize: scale so Frobenius norm ≈ sqrt(nrows)
+    # This puts singular values near 1
+    X = G / (G.norm() + 1e-7) * (G.shape[0] ** 0.5)
     
     # Transpose if needed to make it "tall-skinny" for efficiency
     if G.shape[0] < G.shape[1]:
@@ -634,6 +621,9 @@ def newton_schulz_5(G, steps=5):
         A = X @ X.T                           # (m, m)
         B = A @ X                             # (m, n) = A @ X
         X = a * X + b * B + c * (A @ B)      # quintic update
+    
+    if G.shape[0] < G.shape[1]:
+        X = X.T
     
     return X
 
@@ -725,317 +715,23 @@ class Muon(Optimizer):
         return loss
 ```
 
-## 5.2 Usage Example — Training a Small Transformer
+## 5.2 Usage Example
 
 ```python
-import torch
-import torch.nn as nn
+# 1. Group parameters
+muon_params = [p for n, p in model.named_parameters() if p.dim() >= 2 and 'embed' not in n]
+adam_params = [p for n, p in model.named_parameters() if p.dim() < 2 or 'embed' in n]
 
-# ---- Define a simple model ----
-class SmallTransformer(nn.Module):
-    def __init__(self, vocab_size=50257, d_model=768, n_heads=12, n_layers=12):
-        super().__init__()
-        self.embedding = nn.Embedding(vocab_size, d_model)
-        self.pos_embedding = nn.Embedding(1024, d_model)
-        
-        self.layers = nn.ModuleList([
-            nn.TransformerEncoderLayer(
-                d_model=d_model, 
-                nhead=n_heads, 
-                dim_feedforward=4*d_model,
-                batch_first=True,
-                norm_first=True
-            ) for _ in range(n_layers)
-        ])
-        
-        self.ln_f = nn.LayerNorm(d_model)
-        self.lm_head = nn.Linear(d_model, vocab_size, bias=False)
-    
-    def forward(self, x):
-        B, T = x.shape
-        pos = torch.arange(T, device=x.device).unsqueeze(0)
-        x = self.embedding(x) + self.pos_embedding(pos)
-        for layer in self.layers:
-            x = layer(x)
-        x = self.ln_f(x)
-        return self.lm_head(x)
+# 2. Initialize optimizers
+opt1 = Muon(muon_params, lr=0.02, momentum=0.95)
+opt2 = torch.optim.AdamW(adam_params, lr=3e-4)
 
-model = SmallTransformer().cuda()
-
-# ---- Separate parameters for Muon vs AdamW ----
-muon_params = []
-adam_params = []
-
-for name, param in model.named_parameters():
-    if param.dim() >= 2 and 'embedding' not in name and 'lm_head' not in name:
-        muon_params.append(param)
-    else:
-        adam_params.append(param)
-
-print(f"Muon params: {sum(p.numel() for p in muon_params):,}")
-print(f"Adam params: {sum(p.numel() for p in adam_params):,}")
-
-# ---- Create optimizers ----
-optimizer_muon = Muon(
-    muon_params, 
-    lr=0.02,
-    momentum=0.95,
-    weight_decay=0.01,
-    ns_steps=5
-)
-
-optimizer_adam = torch.optim.AdamW(
-    adam_params,
-    lr=3e-4,
-    betas=(0.9, 0.95),
-    weight_decay=0.1
-)
-
-# ---- Training loop ----
-for step in range(num_steps):
-    x, y = get_batch()  # your data loading
-    
-    logits = model(x)
-    loss = torch.nn.functional.cross_entropy(
-        logits.view(-1, logits.size(-1)), 
-        y.view(-1)
-    )
-    
-    loss.backward()
-    
-    # Clip gradients (optional, Muon is naturally bounded)
-    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-    
-    optimizer_muon.step()
-    optimizer_adam.step()
-    
-    optimizer_muon.zero_grad()
-    optimizer_adam.zero_grad()
-    
-    if step % 100 == 0:
-        print(f"Step {step}, Loss: {loss.item():.4f}")
-```
-
-## 5.3 Production Implementation (with Optimizations)
-
-```python
-import torch
-from torch.optim import Optimizer
-
-
-@torch.compile
-def newton_schulz_5_compiled(G, steps=5):
-    """
-    Optimized Newton-Schulz with torch.compile and 
-    varying coefficients per iteration.
-    """
-    # Three sets of coefficients, optimized for convergence
-    # over singular value range [0.6, 1.4] after normalization
-    coeffs = [
-        (3.4445, -4.7750,  2.0315),
-        (11.3168, -20.3300, 9.7132),
-        (8.4749, -13.9590, 6.1843),
-        (8.4749, -13.9590, 6.1843),
-        (8.4749, -13.9590, 6.1843),
-    ]
-    
-    # Normalize: scale so Frobenius norm ≈ sqrt(nrows)
-    # This puts singular values near 1
-    X = G.bfloat16()
-    nrows = X.shape[0]
-    X = X / (X.norm() + 1e-7) * (nrows ** 0.5)
-    
-    for i in range(steps):
-        a, b, c = coeffs[min(i, len(coeffs)-1)]
-        A = X @ X.T
-        B = A @ X
-        X = a * X + b * B + c * (A @ B)
-    
-    return X.to(G.dtype)
-
-
-class MuonOptimized(Optimizer):
-    """
-    Production Muon with:
-    - torch.compile for Newton-Schulz
-    - Per-iteration varying coefficients
-    - Proper handling of different parameter shapes
-    - Optional gradient accumulation support
-    """
-    
-    def __init__(self, params, lr=0.02, momentum=0.95,
-                 weight_decay=0.0, ns_steps=5, nesterov=True):
-        if lr < 0.0:
-            raise ValueError(f"Invalid lr: {lr}")
-        if momentum < 0.0 or momentum >= 1.0:
-            raise ValueError(f"Invalid momentum: {momentum}")
-        
-        defaults = dict(
-            lr=lr, momentum=momentum, weight_decay=weight_decay,
-            ns_steps=ns_steps, nesterov=nesterov
-        )
-        super().__init__(params, defaults)
-    
-    @torch.no_grad()
-    def step(self, closure=None):
-        loss = None
-        if closure is not None:
-            with torch.enable_grad():
-                loss = closure()
-        
-        for group in self.param_groups:
-            lr = group['lr']
-            mu = group['momentum']
-            wd = group['weight_decay']
-            ns_steps = group['ns_steps']
-            nesterov = group['nesterov']
-            
-            # Collect all updates, then apply
-            # (enables potential future FSDP/DDP optimizations)
-            updates = []
-            
-            for p in group['params']:
-                if p.grad is None:
-                    continue
-                
-                g = p.grad
-                
-                if g.is_sparse:
-                    raise RuntimeError("Muon does not support sparse gradients")
-                
-                state = self.state[p]
-                
-                if len(state) == 0:
-                    state['step'] = 0
-                    state['momentum_buffer'] = torch.zeros_like(g)
-                
-                state['step'] += 1
-                buf = state['momentum_buffer']
-                
-                # Momentum update
-                buf.mul_(mu).add_(g)
-                
-                if nesterov:
-                    update = g + mu * buf
-                else:
-                    update = buf.clone()
-                
-                # Handle reshaping
-                orig_shape = update.shape
-                if update.dim() == 1:
-                    # Skip 1D params — shouldn't be in Muon group
-                    # But handle gracefully: just use sign
-                    update = update.sign()
-                else:
-                    if update.dim() > 2:
-                        update = update.view(update.shape[0], -1)
-                    
-                    transposed = False
-                    if update.shape[0] < update.shape[1]:
-                        update = update.T
-                        transposed = True
-                    
-                    update = newton_schulz_5_compiled(update, ns_steps)
-                    
-                    if transposed:
-                        update = update.T
-                    
-                    update = update.view(orig_shape)
-                
-                # Scale the update to have the right magnitude
-                # The polar factor has Frobenius norm = sqrt(min(m,n))
-                # We want the update to have norm proportional to sqrt(numel)
-                scale = max(1, update.shape[0] / update.shape[1]) ** 0.5
-                
-                updates.append((p, update, scale))
-            
-            # Apply all updates
-            for p, update, scale in updates:
-                if wd != 0:
-                    p.mul_(1 - lr * wd)
-                p.add_(update, alpha=-lr * scale)
-        
-        return loss
-```
-
-## 5.4 Combined Optimizer Helper
-
-```python
-def create_muon_optimizer(model, muon_lr=0.02, adam_lr=3e-4,
-                          muon_momentum=0.95, weight_decay=0.01,
-                          adam_betas=(0.9, 0.95)):
-    """
-    Creates Muon + AdamW optimizer pair for a transformer model.
-    
-    Returns a single object that manages both optimizers.
-    """
-    
-    muon_params = []
-    adam_params = []
-    
-    for name, param in model.named_parameters():
-        if not param.requires_grad:
-            continue
-        
-        # Use Muon for 2D weight matrices (except embeddings)
-        if (param.dim() >= 2 
-            and 'embedding' not in name 
-            and 'embed' not in name
-            and 'lm_head' not in name
-            and 'head' not in name):
-            muon_params.append(param)
-        else:
-            adam_params.append(param)
-    
-    print(f"Muon: {len(muon_params)} params, "
-          f"{sum(p.numel() for p in muon_params)/1e6:.1f}M elements")
-    print(f"Adam: {len(adam_params)} params, "
-          f"{sum(p.numel() for p in adam_params)/1e6:.1f}M elements")
-    
-    optimizers = []
-    
-    if muon_params:
-        optimizers.append(Muon(
-            muon_params, lr=muon_lr, momentum=muon_momentum,
-            weight_decay=weight_decay
-        ))
-    
-    if adam_params:
-        optimizers.append(torch.optim.AdamW(
-            adam_params, lr=adam_lr, betas=adam_betas,
-            weight_decay=weight_decay
-        ))
-    
-    return CombinedOptimizer(optimizers)
-
-
-class CombinedOptimizer:
-    """Wraps multiple optimizers into a single interface."""
-    
-    def __init__(self, optimizers):
-        self.optimizers = optimizers
-    
-    def step(self):
-        for opt in self.optimizers:
-            opt.step()
-    
-    def zero_grad(self, set_to_none=True):
-        for opt in self.optimizers:
-            opt.zero_grad(set_to_none=set_to_none)
-    
-    def state_dict(self):
-        return [opt.state_dict() for opt in self.optimizers]
-    
-    def load_state_dict(self, state_dicts):
-        for opt, sd in zip(self.optimizers, state_dicts):
-            opt.load_state_dict(sd)
-    
-    @property
-    def param_groups(self):
-        groups = []
-        for opt in self.optimizers:
-            groups.extend(opt.param_groups)
-        return groups
+# 3. Step both in training loop
+loss.backward()
+opt1.step()
+opt2.step()
+opt1.zero_grad()
+opt2.zero_grad()
 ```
 
 ---
@@ -1175,70 +871,6 @@ a + b + c = 3.4445 + (-4.7750) + 2.0315 = 0.701
 
 Wait — the coefficients used in practice don't exactly satisfy $f(1)=1$ because they're numerically optimized over a range, not just at the fixed point. The iteration is designed to converge to a matrix with all singular values = 1 after multiple steps, even if each individual step doesn't exactly preserve $\sigma = 1$.
 
-## 6.6 Visualizing the Iterations
-
-```python
-import numpy as np
-import matplotlib.pyplot as plt
-
-def plot_ns_iteration():
-    """Visualize how Newton-Schulz maps singular values."""
-    sigma = np.linspace(0.1, 2.0, 1000)
-    
-    # Three coefficient sets
-    coeffs = [
-        (3.4445, -4.7750, 2.0315),
-        (11.3168, -20.3300, 9.7132),
-        (8.4749, -13.9590, 6.1843),
-    ]
-    
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5))
-    
-    for idx, (a, b, c) in enumerate(coeffs):
-        f = a * sigma + b * sigma**3 + c * sigma**5
-        
-        axes[idx].plot(sigma, f, 'b-', linewidth=2, label='f(σ)')
-        axes[idx].plot(sigma, sigma, 'k--', alpha=0.3, label='identity')
-        axes[idx].axhline(y=1, color='r', linestyle=':', alpha=0.5, label='target')
-        axes[idx].axvline(x=1, color='r', linestyle=':', alpha=0.5)
-        axes[idx].set_xlim(0, 2)
-        axes[idx].set_ylim(-0.5, 2)
-        axes[idx].set_xlabel('σ (input singular value)')
-        axes[idx].set_ylabel('f(σ) (output singular value)')
-        axes[idx].set_title(f'Iteration {idx+1}: a={a}, b={b}, c={c}')
-        axes[idx].legend()
-        axes[idx].grid(True, alpha=0.3)
-    
-    plt.tight_layout()
-    plt.savefig('ns_iterations.png', dpi=150)
-    plt.show()
-
-    # Show convergence over multiple iterations
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
-    
-    initial_sigmas = [0.3, 0.5, 0.7, 0.9, 1.0, 1.1, 1.3, 1.5, 1.8]
-    
-    for s0 in initial_sigmas:
-        trajectory = [s0]
-        s = s0
-        for i in range(5):
-            a, b, c = coeffs[min(i, len(coeffs)-1)]
-            s = a * s + b * s**3 + c * s**5
-            trajectory.append(s)
-        ax2.plot(trajectory, 'o-', label=f'σ₀={s0}', markersize=4)
-    
-    ax2.axhline(y=1, color='red', linestyle='--', label='target')
-    ax2.set_xlabel('Iteration')
-    ax2.set_ylabel('Singular value')
-    ax2.set_title('Convergence of Singular Values over NS Iterations')
-    ax2.legend(ncol=3)
-    ax2.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.savefig('ns_convergence.png', dpi=150)
-    plt.show()
-
-plot_ns_iteration()
-```
 
 ## 6.7 Computational Cost Analysis
 
@@ -1453,124 +1085,17 @@ Base config:  batch_size=512, lr=0.02, momentum=0.95
 
 The standard linear scaling rule works reasonably well, though square-root scaling is often better for Muon.
 
-## 7.8 Complete Training Recipe
+## 7.8 Recommended Hyperparameters (GPT-2 124M)
 
-Here's a battle-tested recipe for training a GPT-2 scale model:
-
-```python
-import math
-import torch
-import torch.nn as nn
-from torch.cuda.amp import GradScaler, autocast
-
-# ---- Configuration ----
-config = {
-    'model_dim': 768,
-    'n_heads': 12,
-    'n_layers': 12,
-    'vocab_size': 50257,
-    'max_seq_len': 1024,
-    'batch_size': 64,
-    'grad_accum_steps': 8,        # effective batch = 512
-    'max_steps': 10000,
-    'warmup_steps': 200,
-    'muon_lr': 0.02,
-    'adam_lr': 3e-4,
-    'muon_momentum': 0.95,
-    'weight_decay': 0.01,
-    'adam_betas': (0.9, 0.95),
-    'adam_eps': 1e-8,
-    'max_grad_norm': 1.0,
-    'ns_steps': 5,
-}
-
-# ---- Setup model & optimizers ----
-model = build_model(config).cuda()
-
-# Parameter grouping
-muon_params = []
-adam_params_decay = []
-adam_params_nodecay = []
-
-for name, p in model.named_parameters():
-    if not p.requires_grad:
-        continue
-    if p.dim() >= 2 and 'embed' not in name and 'head' not in name:
-        muon_params.append(p)
-    elif p.dim() >= 2:
-        adam_params_decay.append(p)
-    else:
-        adam_params_nodecay.append(p)
-
-opt_muon = Muon(
-    muon_params,
-    lr=config['muon_lr'],
-    momentum=config['muon_momentum'],
-    weight_decay=config['weight_decay'],
-    ns_steps=config['ns_steps'],
-)
-
-opt_adam = torch.optim.AdamW([
-    {'params': adam_params_decay, 'weight_decay': config['weight_decay']},
-    {'params': adam_params_nodecay, 'weight_decay': 0.0},
-], lr=config['adam_lr'], betas=config['adam_betas'], eps=config['adam_eps'])
-
-# ---- Learning rate schedule ----
-def cosine_schedule(step, warmup, total, max_lr, min_lr_ratio=0.1):
-    if step < warmup:
-        return max_lr * step / warmup
-    progress = (step - warmup) / max(1, total - warmup)
-    return max_lr * (min_lr_ratio + (1 - min_lr_ratio) * 
-                     0.5 * (1 + math.cos(math.pi * progress)))
-
-# ---- Training loop ----
-scaler = GradScaler()
-
-for step in range(config['max_steps']):
-    # Update learning rates
-    muon_lr = cosine_schedule(step, config['warmup_steps'], 
-                               config['max_steps'], config['muon_lr'])
-    adam_lr = cosine_schedule(step, config['warmup_steps'], 
-                              config['max_steps'], config['adam_lr'])
-    
-    for g in opt_muon.param_groups:
-        g['lr'] = muon_lr
-    for g in opt_adam.param_groups:
-        g['lr'] = adam_lr
-    
-    # Gradient accumulation
-    total_loss = 0
-    for micro_step in range(config['grad_accum_steps']):
-        x, y = get_batch(config['batch_size'], config['max_seq_len'])
-        
-        with autocast(dtype=torch.bfloat16):
-            logits = model(x)
-            loss = nn.functional.cross_entropy(
-                logits.view(-1, config['vocab_size']),
-                y.view(-1)
-            ) / config['grad_accum_steps']
-        
-        scaler.scale(loss).backward()
-        total_loss += loss.item()
-    
-    # Gradient clipping
-    scaler.unscale_(opt_muon)
-    scaler.unscale_(opt_adam)
-    torch.nn.utils.clip_grad_norm_(model.parameters(), config['max_grad_norm'])
-    
-    # Step both optimizers
-    scaler.step(opt_muon)
-    scaler.step(opt_adam)
-    scaler.update()
-    
-    opt_muon.zero_grad(set_to_none=True)
-    opt_adam.zero_grad(set_to_none=True)
-    
-    # Logging
-    if step % 50 == 0:
-        print(f"Step {step:5d} | Loss {total_loss:.4f} | "
-              f"Muon LR {muon_lr:.6f} | Adam LR {adam_lr:.6f}")
-```
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| Muon LR | 0.02 | ~100x larger than Adam |
+| Adam LR | 3e-4 | For embeddings, biases, LN |
+| Muon Momentum | 0.95 | Nesterov defaults |
+| Weight Decay | 0.01 | Decoupled |
+| NS Steps | 5 | Quintic variant |
+| Warmup | 200 steps | Linear warmup |
+| Schedule | Cosine | Standard decay to 0.1x |
 
 ## 7.9 Common Pitfalls & Debugging
 
@@ -1637,6 +1162,8 @@ for name, p in model.named_parameters():
 
 ## 8.2 Memory Comparison
 
+![Bar chart comparing the optimizer state memory footprint of SGD, Muon, Adam, and Shampoo relative to the model size.](images/08_memory_comparison.png)
+
 For a model with $N$ total parameters (all 2D matrices of avg shape $d \times d$):
 
 | Optimizer | Optimizer States | Total Memory |
@@ -1666,6 +1193,8 @@ The forward+backward pass for the same layer (batch $B$, seq $T$): $\mathcal{O}(
 So Muon's overhead is roughly **6% of the forward/backward cost** for this layer.
 
 ## 8.4 Convergence Comparison
+
+![Line chart showing validation loss curves over time. Muon reaches the target loss of 3.28 in roughly half the steps compared to AdamW.](images/08_convergence_comparison.png)
 
 ### GPT-2 124M on OpenWebText (representative results):
 
@@ -1700,66 +1229,6 @@ Wall-clock time to reach val loss 3.28 (single A100):
 - You need an optimizer for **sparse gradients** (use SparseAdam)
 - Proven recipes exist with Adam and changing is risky (fine-tuning BERT, etc.)
 
-## 8.6 Detailed Experiment: Muon vs Adam
-
-```python
-"""
-Controlled comparison of Muon vs Adam on a small language model.
-"""
-import torch
-import torch.nn as nn
-import time
-from collections import defaultdict
-
-def run_comparison(model_fn, data_fn, steps=2000):
-    results = {}
-    
-    for opt_name in ['Adam', 'Muon']:
-        torch.manual_seed(42)
-        model = model_fn().cuda()
-        
-        if opt_name == 'Adam':
-            optimizer = torch.optim.AdamW(
-                model.parameters(), lr=3e-4, 
-                betas=(0.9, 0.95), weight_decay=0.1
-            )
-        else:
-            muon_p, adam_p = [], []
-            for n, p in model.named_parameters():
-                if p.dim() >= 2 and 'embed' not in n:
-                    muon_p.append(p)
-                else:
-                    adam_p.append(p)
-            
-            optimizer = CombinedOptimizer([
-                Muon(muon_p, lr=0.02, momentum=0.95, weight_decay=0.01),
-                torch.optim.AdamW(adam_p, lr=3e-4, weight_decay=0.1)
-            ])
-        
-        losses = []
-        times = []
-        t0 = time.time()
-        
-        for step in range(steps):
-            x, y = data_fn()
-            logits = model(x)
-            loss = nn.functional.cross_entropy(
-                logits.view(-1, logits.size(-1)), y.view(-1)
-            )
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad(set_to_none=True)
-            
-            if step % 50 == 0:
-                losses.append(loss.item())
-                times.append(time.time() - t0)
-        
-        results[opt_name] = {'losses': losses, 'times': times}
-        print(f"{opt_name}: final loss = {losses[-1]:.4f}, "
-              f"time = {times[-1]:.1f}s")
-    
-    return results
-```
 
 ---
 
@@ -1777,194 +1246,15 @@ However, with **FSDP** (Fully Sharded Data Parallelism), parameters and gradient
 1. Newton-Schulz needs the **full gradient matrix** to compute the polar decomposition
 2. Sharded gradients only have a portion of the matrix
 
-## 9.2 Muon with DDP
+## 9.2 Distributed Usage Guide
 
-DDP is straightforward — just wrap the model:
+**Muon with DDP** works out of the box. Since DDP performs an `AllReduce` on gradients before the optimizer step, every GPU has the full (accumulated) gradient. Muon then runs the Newton-Schulz iterations independently on each GPU, producing identical orthogonal updates across the fleet.
 
-```python
-import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel as DDP
+**Muon with FSDP** is more challenging because parameters and gradients are sharded. To run Muon correctly, you must either:
+1. **Unshard gradients** before the Newton-Schulz step (expensive communication), or
+2. **Compute the update sharded** (mathematically complex as it requires distributed SVD/Newton-Schulz).
 
-dist.init_process_group('nccl')
-rank = dist.get_rank()
-world_size = dist.get_world_size()
-
-model = build_model().cuda(rank)
-model = DDP(model, device_ids=[rank])
-
-# Muon works exactly the same — gradients are all-reduced before step()
-muon_params = [p for n, p in model.named_parameters() 
-               if p.dim() >= 2 and 'embed' not in n]
-optimizer = Muon(muon_params, lr=0.02)
-
-for step in range(num_steps):
-    loss = compute_loss(model, batch)
-    loss.backward()          # DDP handles gradient all-reduce
-    optimizer.step()         # Each GPU runs NS iterations independently
-    optimizer.zero_grad()
-```
-
-## 9.3 Muon with FSDP (Advanced)
-
-With FSDP, we need to handle gradient unsharding for Newton-Schulz:
-
-```python
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-
-class MuonFSDP(Optimizer):
-    """Muon adapted for FSDP training."""
-    
-    def __init__(self, params, lr=0.02, momentum=0.95,
-                 weight_decay=0.0, ns_steps=5):
-        defaults = dict(lr=lr, momentum=momentum, 
-                        weight_decay=weight_decay, ns_steps=ns_steps)
-        super().__init__(params, defaults)
-    
-    @torch.no_grad()
-    def step(self):
-        for group in self.param_groups:
-            for p in group['params']:
-                if p.grad is None:
-                    continue
-                
-                g = p.grad
-                state = self.state[p]
-                
-                if len(state) == 0:
-                    state['step'] = 0
-                    state['momentum_buffer'] = torch.zeros_like(g)
-                
-                state['step'] += 1
-                buf = state['momentum_buffer']
-                
-                # Momentum
-                buf.mul_(group['momentum']).add_(g)
-                nesterov = group['momentum'] * buf + g
-                
-                # Reshape to 2D
-                orig_shape = nesterov.shape
-                if nesterov.dim() >= 2:
-                    nesterov_2d = nesterov.view(nesterov.shape[0], -1)
-                    
-                    # All-gather the full gradient for NS iterations
-                    if dist.is_initialized() and dist.get_world_size() > 1:
-                        full_nesterov = self._allgather_tensor(nesterov_2d)
-                    else:
-                        full_nesterov = nesterov_2d
-                    
-                    # Run Newton-Schulz on full matrix
-                    transposed = False
-                    if full_nesterov.shape[0] < full_nesterov.shape[1]:
-                        full_nesterov = full_nesterov.T
-                        transposed = True
-                    
-                    Q = newton_schulz_5(full_nesterov, group['ns_steps'])
-                    
-                    if transposed:
-                        Q = Q.T
-                    
-                    # Extract local shard
-                    if dist.is_initialized() and dist.get_world_size() > 1:
-                        Q = self._get_local_shard(Q)
-                    
-                    update = Q.view(orig_shape)
-                else:
-                    update = nesterov.sign()
-                
-                p.mul_(1 - group['lr'] * group['weight_decay'])
-                p.add_(update, alpha=-group['lr'])
-    
-    def _allgather_tensor(self, tensor):
-        """All-gather a sharded tensor across ranks."""
-        world_size = dist.get_world_size()
-        gathered = [torch.zeros_like(tensor) for _ in range(world_size)]
-        dist.all_gather(gathered, tensor)
-        return torch.cat(gathered, dim=0)
-    
-    def _get_local_shard(self, tensor):
-        """Get the local shard of a gathered tensor."""
-        rank = dist.get_rank()
-        world_size = dist.get_world_size()
-        shard_size = tensor.shape[0] // world_size
-        return tensor[rank * shard_size : (rank + 1) * shard_size]
-```
-
-## 9.4 Efficient Communication Strategy
-
-The naive approach above all-gathers the entire gradient, which is expensive. A more efficient strategy:
-
-```python
-class MuonDistributed(Optimizer):
-    """
-    Efficient distributed Muon that overlaps NS computation with communication.
-    
-    Key insight: We can run NS iterations on locally-available gradient data
-    and only communicate the final update, rather than the full gradient.
-    """
-    
-    @torch.no_grad()
-    def step(self):
-        # Phase 1: Compute momentum updates for all params (local)
-        updates_to_orthogonalize = []
-        
-        for group in self.param_groups:
-            for p in group['params']:
-                if p.grad is None:
-                    continue
-                
-                # ... momentum computation ...
-                
-                updates_to_orthogonalize.append((p, nesterov, group))
-        
-        # Phase 2: Batch the Newton-Schulz computations
-        # Group by shape for efficient batching
-        shape_groups = defaultdict(list)
-        for p, nesterov, group in updates_to_orthogonalize:
-            shape = nesterov.shape
-            shape_groups[shape].append((p, nesterov, group))
-        
-        # Phase 3: Run NS iterations with optional async all-reduce
-        for shape, items in shape_groups.items():
-            # Stack all updates of the same shape
-            stacked = torch.stack([item[1] for item in items])
-            
-            # Batched Newton-Schulz
-            Q_stacked = batched_newton_schulz(stacked)
-            
-            # Apply updates
-            for i, (p, _, group) in enumerate(items):
-                p.mul_(1 - group['lr'] * group['weight_decay'])
-                p.add_(Q_stacked[i], alpha=-group['lr'])
-
-
-def batched_newton_schulz(G_batch, steps=5):
-    """
-    Run Newton-Schulz on a batch of matrices simultaneously.
-    
-    G_batch: shape (B, m, n)
-    Returns: shape (B, m, n)
-    """
-    coeffs = [
-        (3.4445, -4.7750, 2.0315),
-        (11.3168, -20.3300, 9.7132),
-        (8.4749, -13.9590, 6.1843),
-    ]
-    
-    X = G_batch.bfloat16()
-    
-    # Normalize each matrix independently
-    norms = X.flatten(1).norm(dim=1, keepdim=True).unsqueeze(-1)
-    nrows = X.shape[1]
-    X = X / (norms + 1e-7) * (nrows ** 0.5)
-    
-    for i in range(steps):
-        a, b, c = coeffs[min(i, len(coeffs)-1)]
-        A = X @ X.transpose(-2, -1)          # (B, m, m)
-        B = A @ X                             # (B, m, n)
-        X = a * X + b * B + c * (A @ B)      # (B, m, n)
-    
-    return X.to(G_batch.dtype)
-```
+The most common production approach is to run Newton-Schulz on sharded matrices where possible, or use specialized kernels that overlap the orthogonalization with communication.
 
 ## 9.5 Scaling Results
 
@@ -2208,7 +1498,7 @@ def zeropower_via_newtonschulz5(G: Tensor, steps: int = 5) -> Tensor:
     X = G.bfloat16()
     
     # Ensure tall matrix
-    if G.shape[0] > G.shape[1]:
+    if G.shape[0] < G.shape[1]:
         X = X.T
     
     # Normalize: singular values should be near 1
@@ -2219,7 +1509,7 @@ def zeropower_via_newtonschulz5(G: Tensor, steps: int = 5) -> Tensor:
         B = b * A + c * A @ A
         X = a * X + B @ X
     
-    if G.shape[0] > G.shape[1]:
+    if G.shape[0] < G.shape[1]:
         X = X.T
     
     return X.to(G.dtype)
