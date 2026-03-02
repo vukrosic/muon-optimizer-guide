@@ -1,14 +1,21 @@
-# Muon Optimizer Guide
+# LLM Research Kit & Muon Optimizer Guide
 
-[]
-
-# LLM Research Kit
-
-A high-performance codebase for LLM research, pretraining, and optimization: testing new architectures, optimizers, or data strategies.
+A high-performance codebase for LLM research, pretraining, and optimization.
 
 ---
 
-## 🚀 Getting Started
+## 📚 The Muon Optimizer Guide
+
+The Muon optimizer is replacing AdamW across the industry (DeepSeek, OpenAI, Meta, Moonshot AI). This guide explains why and how to use it to speed up training by up to 2x.
+
+[**👉 Click here to read the Muon Optimizer Guide**](course/muon_optimizer_guide.md)
+
+<img src="https://pbs.twimg.com/media/GZoW2CLbsAAeXVK.jpg" alt="NanoGPT wall-clock time curves" width="600">
+
+
+---
+
+## 🚀 Other than this guide, this repo contains LLM that you can train and do research on
 
 #### Install Dependencies
 ```bash
