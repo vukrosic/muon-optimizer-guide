@@ -6,7 +6,9 @@ A high-performance codebase for LLM research, pretraining, and optimization.
 
 ## 📚 The Muon Optimizer Guide
 
-The Muon optimizer is replacing AdamW across the industry (DeepSeek, OpenAI, Meta, Moonshot AI). This guide explains why and how to use it to speed up training by up to 2x.
+The Muon optimizer is replacing AdamW across the industry (DeepSeek, OpenAI, Meta, Moonshot AI). **PyTorch 2.10 now includes an official implementation!** This guide explains why and how to use it, and includes a **faster Polar Express implementation** alongside the official and original versions.
+
+
 
 [**👉 Click here to read the Muon Optimizer Guide**](course/muon_optimizer_guide.md)
 

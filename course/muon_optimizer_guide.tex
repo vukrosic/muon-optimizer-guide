@@ -55,6 +55,9 @@ Everyone (OpenAI, Meta, DeepSeek, Moonshot AI,...) replaced AdamW with Muon opti
 
 DeepSeek researcher said that Muon optimizer was one of 2 biggest inventions in 2025.
 
+\textbf{PyTorch 2.10 has official implementation of Muon!!!}
+
+
 If you train ANY neural network - you MUST try it!
 
 It should make your training 30\% to 2x faster!
@@ -141,9 +144,10 @@ Muon optimizer makes \textbf{weight update matrices} orthogonal, not the weight 
 
 \section{Code \& Implementation}
 
-Find the original Muon code by \href{https://github.com/KellerJordan/Muon/blob/master/muon.py}{searching ``muon keller jordan code''}.
+\textbf{UPDATE:} PyTorch 2.10 now includes an official implementation of Muon! You can find it under \texttt{torch.optim.Muon}.
 
-My implementation below contains another improvement - \href{https://arxiv.org/abs/2505.16932}{polar express}. You may just use the original code from the link above or my implementation.
+\textbf{Performance Note:} My implementation below uses \href{https://arxiv.org/abs/2505.16932}{Polar Express} and typically works faster. However, if you prefer simplicity, you can use the official PyTorch implementation or the \href{https://github.com/KellerJordan/Muon/blob/master/muon.py}{original Keller Jordan code}.
+
 
 If you copy paste the code into your AI agent, it should automatically implement it.
 

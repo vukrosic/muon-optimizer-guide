@@ -8,6 +8,8 @@ If you train ANY neural network - you MUST try it!
 
 It should make your training 30% to 2x faster!
 
+**PyTorch 2.10 has official implementation of Muon!!!**
+
 ---
 
 Written by Vuk Rosić, reviewed by [Chaoqi Liang](https://scholar.google.com/citations?user=r1yke4EAAAAJ&hl=en)
@@ -83,9 +85,10 @@ Muon optimizer makes **weight update matrices** orthogonal, not the weight matri
 
 # Code & Implementation
 
-Find the original Muon code [here](https://github.com/KellerJordan/Muon/blob/master/muon.py)
+**UPDATE:** PyTorch 2.10 now includes an official implementation of Muon! You can find it under `torch.optim.Muon`.
 
-My implementation below contains another improvement - [polar express](https://arxiv.org/abs/2505.16932). You may just use the original code from the link above or my implementation.
+**Performance Note:** My implementation below uses [Polar Express](https://arxiv.org/abs/2505.16932) and typically works faster. However, if you prefer simplicity, you can use the official PyTorch implementation or the [original Keller Jordan code](https://github.com/KellerJordan/Muon/blob/master/muon.py).
+
 
 If you copy paste the code into your AI agent, it should automatically implement it.
 
